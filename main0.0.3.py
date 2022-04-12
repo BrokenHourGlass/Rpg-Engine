@@ -32,6 +32,7 @@ class Battle_sys:
     hero_list = []
     enemy_list = []
     battle_order = []
+    dead_list = []
 
     def turn_order(self, hero, enemy):
         organize_list = []
@@ -43,10 +44,11 @@ class Battle_sys:
             organize_list.append((enemy[i], self.roll()+enemy[i].get_mod(enemy[i].get_dex())))
 
         organize_list = sorted(organize_list, key = lambda x: x[1], reverse = True)
+        for i in organize_list:
+            self.battle_order.append(i[0])
 
-    def add_to_list(self, list, var):
-        #list being battle_sys variable, var being actor
-        pass
+    def get_battle_order(self):
+        return self.battle_order
 
     def roll(self):
         return random.randint(1,20)
@@ -56,6 +58,15 @@ class Battle_sys:
 
     def disadvantage(self):
         return min([self.roll(), self.roll()])
+
+    def check_lifesigns(self):
+        try:
+            for x in range(len(self.battle_order)):
+                if self.battle_order[x].is_dead() == True:
+                    self.dead_list.append(self.battle_order[x])
+                    self.battle_order.pop(x)
+        except IndexError:
+            pass
 
 class Actor:
     health = 0
@@ -73,7 +84,7 @@ class Actor:
     defense = False
     dead = False
 
-    def __init__(self, hp=10, wp=None, arm=None, strength=10, dexterity=10, constitution = 10, intelligence=10, wisdom=10, charisma=10):
+    def __init__(self, hp=10, wp=0, arm=0, strength=10, dexterity=10, constitution = 10, intelligence=10, wisdom=10, charisma=10):
         self.health = hp
         self.weapon = wp
         self.armor = arm
@@ -168,6 +179,8 @@ class Actor:
             defense = defense + 5
         if(random.randint(1,20)+self.get_mod(self.str))>defense:
             target.set_health(target.get_health()-(random.randint(1,6)+self.get_mod(self.str)))
+        if target.get_health()<0:
+            target.dead = True
 
 class Player(Actor):
     pass
@@ -186,15 +199,16 @@ bg = pygame.transform.scale(pygame.image.load("background/60checker.png"), test.
 
 act = [Player(100, None, 15, 18, 15)]
 nemesis = [Enemy(100, None, 10, 12)]
-#nemesis.defending()
+nemesis[0].defending()
 
 battle.turn_order(act, nemesis)
 
-while True:
+while any(isinstance(x, Player) for x in battle.get_battle_order()) and any(isinstance(x, Enemy) for x in battle.get_battle_order()):
     test.getScreen().blit(bg, (0,0))
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             sys.exit()
-    #act.attack(nemesis)
-    #print(nemesis.get_health())
+    act[0].attack(nemesis[0])
+    battle.check_lifesigns()
+    print(nemesis[0].get_health())
     pygame.display.update()
